@@ -2,18 +2,12 @@
 
 [English](README.md) | [中文](README_CN.md)
 
-[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/pvmezwkAk5)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 
 
-<p align="center">
-  <img src="screenshots/headline.png" alt="LoongClaw headline logo" width="92%" />
-</p>
 
-
-
-> **注意：** 本项目正在积极开发中，功能可能会变化，欢迎贡献！
+> **注意：** 本项目是 [MicroClaw](https://github.com/microclaw/microclaw) 的分支，仅用于个人使用。
 
 
 一个住在聊天平台里的 AI 智能助手，灵感来自 [nanoclaw](https://github.com/gavrielc/nanoclaw/)，参考了 nanoclaw 的部分思路。LoongClaw 采用“渠道无关核心 + 平台适配器”架构：当前支持 Telegram、Discord、Slack、飞书/Lark、Matrix、WhatsApp、iMessage、Email、Nostr、Signal、DingTalk、QQ、IRC 和 Web，后续可持续扩展更多平台。它支持完整的工具执行：运行 Shell 命令、读写编辑文件、搜索代码库、浏览网页、定时任务、持久化记忆等。

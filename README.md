@@ -1,18 +1,12 @@
 # LoongClaw
-<img src="icon.png" alt="LoongClaw logo" width="56" align="right" />
 
 [English](README.md) | [中文](README_CN.md)
 
-[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/pvmezwkAk5)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 
-<p align="center">
-  <img src="screenshots/headline.png" alt="LoongClaw headline logo" width="92%" />
-</p>
 
-
-> **Note:** This project is under active development. Features may change, and contributions are welcome!
+> **Note:** This project is a fork of [MicroClaw](https://github.com/microclaw/microclaw) to LoongClaw, just for myself.
 
 
 An agentic AI assistant for chat surfaces, inspired by [nanoclaw](https://github.com/gavrielc/nanoclaw/) and incorporating some of its design ideas. LoongClaw uses a channel-agnostic core with platform adapters: it currently supports Telegram, Discord, Slack, Feishu/Lark, Matrix, WhatsApp, iMessage, Email, Nostr, Signal, DingTalk, QQ, IRC, and Web, and is designed to add more platforms over time. It works with multiple LLM providers (Anthropic + OpenAI-compatible APIs) and supports full tool execution: run shell commands, read/write/edit files, search codebases, browse the web, schedule tasks, and maintain persistent memory across conversations.
