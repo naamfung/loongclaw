@@ -6,6 +6,9 @@ use loongclaw_core::text::floor_char_boundary;
 use reqwest::Url;
 use tracing::warn;
 
+/// User agent for HTTP requests
+const USER_AGENT: &str = "Mozilla/5.0 (NOS 1.0; AMD64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
+
 use crate::web_content_validation::{validate_web_content_with_config, WebContentValidationConfig};
 use crate::web_html::{extract_primary_html, html_to_text};
 
@@ -19,7 +22,7 @@ fn http_client(timeout_secs: u64) -> reqwest::Client {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(timeout_secs))
         .redirect(reqwest::redirect::Policy::limited(5))
-        .user_agent("LoongClaw/1.0")
+        .user_agent(USER_AGENT)
         .build()
         .expect("failed to build HTTP client");
     cache.insert(timeout_secs, client.clone());
@@ -36,7 +39,7 @@ fn http_client_no_redirect(timeout_secs: u64) -> reqwest::Client {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(timeout_secs))
         .redirect(reqwest::redirect::Policy::none())
-        .user_agent("LoongClaw/1.0")
+        .user_agent(USER_AGENT)
         .build()
         .expect("failed to build HTTP client");
     cache.insert(timeout_secs, client.clone());

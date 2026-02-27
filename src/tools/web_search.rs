@@ -4,6 +4,8 @@ use serde_json::json;
 use super::{schema_object, Tool, ToolResult};
 use loongclaw_core::llm_types::ToolDefinition;
 
+mod servicor;
+
 pub struct WebSearchTool {
     default_timeout_secs: u64,
 }
@@ -53,15 +55,18 @@ impl Tool for WebSearchTool {
         };
         let timeout_secs = resolve_timeout_secs(&input, self.default_timeout_secs);
 
-        match loongclaw_tools::web_search::search_baidu_with_timeout(&query, timeout_secs).await {
-            Ok(results) => {
-                if results.is_empty() {
+        // Call servicor search function
+        match servicor::search(&query) {
+            Ok(result) => {
+                if result.is_empty() {
                     ToolResult::success("No results found.".into())
                 } else {
-                    ToolResult::success(results)
+                    ToolResult::success(result)
                 }
             }
-            Err(e) => ToolResult::error(format!("Search failed: {e}")),
+            Err(e) => {
+                ToolResult::error(format!("Search failed: {e}"))
+            }
         }
     }
 }

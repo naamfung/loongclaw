@@ -164,27 +164,36 @@ pub fn extract_baidu_results(html: &str, max_results: usize) -> Vec<SearchItem> 
     let mut pos = 0usize;
 
     while results.len() < max_results {
-        let Some(h3_start) = find_case_insensitive(html, "<h3", pos) else {
+        // Try to find search result items
+        let Some(result_start) = find_case_insensitive(html, "<div class=\"result", pos) else {
+            // If no more results, break
             break;
         };
-        let Some(h3_tag_end_rel) = html[h3_start..].find('>') else {
-            break;
+
+        // Find the next result to set pos for next iteration
+        let next_result = find_case_insensitive(html, "<div class=\"result", result_start + 10)
+            .unwrap_or_else(|| html.len());
+        pos = next_result;
+
+        // Extract title and URL
+        let Some(h3_start) = find_case_insensitive(html, "<h3", result_start) else {
+            continue;
+        };
+        let Some(h3_tag_end_rel) = html[h3_start..next_result].find('>') else {
+            continue;
         };
         let h3_tag_end = h3_start + h3_tag_end_rel;
 
         let Some(a_start) = find_case_insensitive(html, "<a", h3_tag_end) else {
-            pos = h3_tag_end + 1;
             continue;
         };
-        let Some(a_tag_end_rel) = html[a_start..].find('>') else {
-            pos = h3_tag_end + 1;
+        let Some(a_tag_end_rel) = html[a_start..next_result].find('>') else {
             continue;
         };
         let a_tag_end = a_start + a_tag_end_rel;
         let a_tag = &html[a_start..=a_tag_end];
 
         let Some(close_rel) = find_case_insensitive(html, "</a>", a_tag_end + 1) else {
-            pos = h3_tag_end + 1;
             continue;
         };
 
@@ -194,26 +203,44 @@ pub fn extract_baidu_results(html: &str, max_results: usize) -> Vec<SearchItem> 
         let title_html = &html[a_tag_end + 1..close_rel];
         let title = html_to_text(title_html);
 
-        // Extract snippet - look for div with class "c-abstract"
-        let Some(abstract_start) = find_case_insensitive(html, "c-abstract", close_rel) else {
-            pos = close_rel + 4;
-            continue;
-        };
-        let Some(div_start) = html[..abstract_start].rfind('<') else {
-            pos = close_rel + 4;
-            continue;
-        };
-        let Some(div_end_rel) = html[div_start..].find('>') else {
-            pos = close_rel + 4;
-            continue;
-        };
-        let div_end = div_start + div_end_rel;
-        let Some(div_close_rel) = find_case_insensitive(html, "</div>", div_end) else {
-            pos = close_rel + 4;
-            continue;
-        };
-        let snippet_html = &html[div_end + 1..div_close_rel];
-        let snippet = html_to_text(snippet_html);
+        // Extract snippet - try different class names
+        let mut snippet = String::new();
+        // Try c-abstract first
+        if let Some(abstract_start) = find_case_insensitive(html, "c-abstract", close_rel) {
+            if abstract_start < next_result {
+                let Some(div_start) = html[..abstract_start].rfind('<') else {
+                    continue;
+                };
+                let Some(div_end_rel) = html[div_start..next_result].find('>') else {
+                    continue;
+                };
+                let div_end = div_start + div_end_rel;
+                let Some(div_close_rel) = find_case_insensitive(html, "</div>", div_end) else {
+                    continue;
+                };
+                let snippet_html = &html[div_end + 1..div_close_rel];
+                snippet = html_to_text(snippet_html);
+            }
+        }
+        // If no c-abstract, try other common class names
+        if snippet.is_empty() {
+            if let Some(abstract_start) = find_case_insensitive(html, "c-span", close_rel) {
+                if abstract_start < next_result {
+                    let Some(span_start) = html[..abstract_start].rfind('<') else {
+                        continue;
+                    };
+                    let Some(span_end_rel) = html[span_start..next_result].find('>') else {
+                        continue;
+                    };
+                    let span_end = span_start + span_end_rel;
+                    let Some(span_close_rel) = find_case_insensitive(html, "</span>", span_end) else {
+                        continue;
+                    };
+                    let snippet_html = &html[span_end + 1..span_close_rel];
+                    snippet = html_to_text(snippet_html);
+                }
+            }
+        }
 
         if !href.is_empty() && !title.is_empty() {
             results.push(SearchItem {
@@ -222,8 +249,6 @@ pub fn extract_baidu_results(html: &str, max_results: usize) -> Vec<SearchItem> 
                 snippet,
             });
         }
-
-        pos = close_rel + 4;
     }
 
     results
