@@ -240,25 +240,29 @@ pub async fn run(
                 .map(|model| (runtime.channel_name.clone(), model))
         },
     );
-    let imessage_runtimes: Vec<IMessageRuntimeContext> = prepare_channel_runtimes(
-        &config,
-        "imessage",
-        &mut registry,
-        &mut llm_model_overrides,
-        build_imessage_runtime_contexts,
-        |runtime, reg| {
-            reg.register(Arc::new(IMessageAdapter::new(
-                runtime.channel_name.clone(),
-                runtime.service.clone(),
-            )));
-        },
-        |runtime| {
-            runtime
-                .model
-                .clone()
-                .map(|model| (runtime.channel_name.clone(), model))
-        },
-    );
+    let imessage_runtimes: Vec<IMessageRuntimeContext> = if std::env::consts::OS == "macos" {
+        prepare_channel_runtimes(
+            &config,
+            "imessage",
+            &mut registry,
+            &mut llm_model_overrides,
+            build_imessage_runtime_contexts,
+            |runtime, reg| {
+                reg.register(Arc::new(IMessageAdapter::new(
+                    runtime.channel_name.clone(),
+                    runtime.service.clone(),
+                )));
+            },
+            |runtime| {
+                runtime
+                    .model
+                    .clone()
+                    .map(|model| (runtime.channel_name.clone(), model))
+            },
+        )
+    } else {
+        Vec::new()
+    };
     let email_runtimes: Vec<EmailRuntimeContext> = prepare_channel_runtimes(
         &config,
         "email",
