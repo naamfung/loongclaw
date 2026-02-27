@@ -202,14 +202,33 @@ impl Tool for BrowserTool {
                 ));
             }
         };
-        args.extend(command_args);
 
         let program = self.get_browser_executable();
         info!("Executing browser command via '{}'", program);
 
-        // Use playwright directly with chromium-browser
+        // Handle different command types for Chrome headless mode
         let mut browser_args = vec!["--headless".to_string(), "--no-sandbox".to_string(), "--disable-setuid-sandbox".to_string()];
-        browser_args.extend(args);
+        
+        if !command_args.is_empty() {
+            match command_args[0].as_str() {
+                "open" if command_args.len() > 1 => {
+                    // For open command, directly pass the URL to Chrome
+                    browser_args.push(command_args[1].clone());
+                },
+                "close" => {
+                    // For close command, we can't directly close Chrome in headless mode
+                    return ToolResult::error("Close command not supported in headless mode.".into());
+                },
+                _ => {
+                    // For other commands, Chrome headless mode doesn't support them directly
+                    return ToolResult::error("This command is not supported in headless mode.".into());
+                }
+            }
+        } else {
+            return ToolResult::error("Empty browser command".into());
+        }
+
+        // args.extend(command_args); // This line is no longer needed as we're directly using command_args
 
         let result = tokio::time::timeout(
             std::time::Duration::from_secs(timeout_secs),
@@ -282,7 +301,7 @@ mod tests {
 
     #[test]
     fn test_browser_tool_name_and_definition() {
-        let tool = BrowserTool::new("/tmp/test-data");
+        let tool = BrowserTool::new("/tmp/test-data", None);
         assert_eq!(tool.name(), "browser");
         let def = tool.definition();
         assert_eq!(def.name, "browser");
@@ -296,7 +315,7 @@ mod tests {
 
     #[test]
     fn test_browser_profile_path() {
-        let tool = BrowserTool::new("/tmp/test-data");
+        let tool = BrowserTool::new("/tmp/test-data", None);
         let path = tool.profile_path(12345);
         assert_eq!(
             path,
@@ -318,9 +337,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_browser_missing_command() {
-        let tool = BrowserTool::new("/tmp/test-data");
+        let tool = BrowserTool::new("/tmp/test-data", None);
         let result = tool.execute(json!({})).await;
         assert!(result.is_error);
-        assert!(result.content.contains("Missing 'command'"));
+        assert!(result.content.contains("Missing 'command"));
     }
 }

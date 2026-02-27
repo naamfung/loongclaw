@@ -535,6 +535,7 @@ impl Config {
             voice_provider: "openai".into(),
             voice_transcription_command: None,
             channels: HashMap::new(),
+            browser_executable_path: default_browser_executable_path(),
         }
     }
 

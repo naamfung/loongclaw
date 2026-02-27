@@ -67,6 +67,7 @@ fn minimal_config() -> Config {
         voice_provider: "openai".into(),
         voice_transcription_command: None,
         channels: std::collections::HashMap::new(),
+        browser_executable_path: None,
     }
 }
 
