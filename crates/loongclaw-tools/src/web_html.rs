@@ -159,6 +159,76 @@ fn extract_snippet_near(html: &str, from: usize) -> String {
     html_to_text(inner)
 }
 
+pub fn extract_baidu_results(html: &str, max_results: usize) -> Vec<SearchItem> {
+    let mut results = Vec::new();
+    let mut pos = 0usize;
+
+    while results.len() < max_results {
+        let Some(h3_start) = find_case_insensitive(html, "<h3", pos) else {
+            break;
+        };
+        let Some(h3_tag_end_rel) = html[h3_start..].find('>') else {
+            break;
+        };
+        let h3_tag_end = h3_start + h3_tag_end_rel;
+
+        let Some(a_start) = find_case_insensitive(html, "<a", h3_tag_end) else {
+            pos = h3_tag_end + 1;
+            continue;
+        };
+        let Some(a_tag_end_rel) = html[a_start..].find('>') else {
+            pos = h3_tag_end + 1;
+            continue;
+        };
+        let a_tag_end = a_start + a_tag_end_rel;
+        let a_tag = &html[a_start..=a_tag_end];
+
+        let Some(close_rel) = find_case_insensitive(html, "</a>", a_tag_end + 1) else {
+            pos = h3_tag_end + 1;
+            continue;
+        };
+
+        let href = extract_attr(a_tag, "href")
+            .map(|h| decode_html_entities(&h).into_owned())
+            .unwrap_or_default();
+        let title_html = &html[a_tag_end + 1..close_rel];
+        let title = html_to_text(title_html);
+
+        // Extract snippet - look for div with class "c-abstract"
+        let Some(abstract_start) = find_case_insensitive(html, "c-abstract", close_rel) else {
+            pos = close_rel + 4;
+            continue;
+        };
+        let Some(div_start) = html[..abstract_start].rfind('<') else {
+            pos = close_rel + 4;
+            continue;
+        };
+        let Some(div_end_rel) = html[div_start..].find('>') else {
+            pos = close_rel + 4;
+            continue;
+        };
+        let div_end = div_start + div_end_rel;
+        let Some(div_close_rel) = find_case_insensitive(html, "</div>", div_end) else {
+            pos = close_rel + 4;
+            continue;
+        };
+        let snippet_html = &html[div_end + 1..div_close_rel];
+        let snippet = html_to_text(snippet_html);
+
+        if !href.is_empty() && !title.is_empty() {
+            results.push(SearchItem {
+                title,
+                url: href,
+                snippet,
+            });
+        }
+
+        pos = close_rel + 4;
+    }
+
+    results
+}
+
 pub fn extract_ddg_results(html: &str, max_results: usize) -> Vec<SearchItem> {
     let mut results = Vec::new();
     let mut pos = 0usize;

@@ -28,7 +28,7 @@ impl Tool for WebSearchTool {
     fn definition(&self) -> ToolDefinition {
         ToolDefinition {
             name: "web_search".into(),
-            description: "Search the web using DuckDuckGo. Returns titles, URLs, and snippets."
+            description: "Search the web using Baidu. Returns titles, URLs, and snippets."
                 .into(),
             input_schema: schema_object(
                 json!({
@@ -53,7 +53,7 @@ impl Tool for WebSearchTool {
         };
         let timeout_secs = resolve_timeout_secs(&input, self.default_timeout_secs);
 
-        match loongclaw_tools::web_search::search_ddg_with_timeout(&query, timeout_secs).await {
+        match loongclaw_tools::web_search::search_baidu_with_timeout(&query, timeout_secs).await {
             Ok(results) => {
                 if results.is_empty() {
                     ToolResult::success("No results found.".into())
@@ -97,7 +97,7 @@ mod tests {
         assert_eq!(tool.name(), "web_search");
         let def = tool.definition();
         assert_eq!(def.name, "web_search");
-        assert!(def.description.contains("DuckDuckGo"));
+        assert!(def.description.contains("Baidu"));
         assert!(def.input_schema["properties"]["query"].is_object());
         let required = def.input_schema["required"].as_array().unwrap();
         assert!(required.iter().any(|v| v == "query"));
