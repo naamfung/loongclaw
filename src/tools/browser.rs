@@ -7,7 +7,7 @@ use tracing::info;
 use loongclaw_core::llm_types::ToolDefinition;
 use loongclaw_core::text::floor_char_boundary;
 
-use super::{auth_context_from_input, schema_object, Tool, ToolResult};
+use super::{auth_context_from_input, schema_object, Tool, ToolResult, servicor};
 
 pub struct BrowserTool {
     data_dir: PathBuf,
@@ -206,78 +206,26 @@ impl Tool for BrowserTool {
         let program = self.get_browser_executable();
         info!("Executing browser command via '{}'", program);
 
-        // Handle different command types for Chrome headless mode
-        let mut browser_args = vec!["--headless".to_string(), "--no-sandbox".to_string(), "--disable-setuid-sandbox".to_string()];
-        
+        // Handle different command types using servicor
         if !command_args.is_empty() {
             match command_args[0].as_str() {
                 "open" if command_args.len() > 1 => {
-                    // For open command, directly pass the URL to Chrome
-                    browser_args.push(command_args[1].clone());
+                    // For open command, use servicor's Visit function
+                    let url = command_args[1].clone();
+                    servicor::visit(&url);
+                    ToolResult::success("Visit executed successfully. Results are printed to console.".into())
                 },
                 "close" => {
-                    // For close command, we can't directly close Chrome in headless mode
-                    return ToolResult::error("Close command not supported in headless mode.".into());
+                    // For close command, not supported by servicor
+                    return ToolResult::error("Close command not supported.".into());
                 },
                 _ => {
-                    // For other commands, Chrome headless mode doesn't support them directly
-                    return ToolResult::error("This command is not supported in headless mode.".into());
+                    // For other commands, not supported by servicor
+                    return ToolResult::error("This command is not supported by servicor.".into());
                 }
             }
         } else {
             return ToolResult::error("Empty browser command".into());
-        }
-
-        // args.extend(command_args); // This line is no longer needed as we're directly using command_args
-
-        let result = tokio::time::timeout(
-            std::time::Duration::from_secs(timeout_secs),
-            tokio::process::Command::new(&program).args(&browser_args).output(),
-        )
-        .await;
-
-        match result {
-            Ok(Ok(output)) => {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                let exit_code = output.status.code().unwrap_or(-1);
-
-                let mut result_text = String::new();
-                if !stdout.is_empty() {
-                    result_text.push_str(&stdout);
-                }
-                if !stderr.is_empty() {
-                    if !result_text.is_empty() {
-                        result_text.push('\n');
-                    }
-                    result_text.push_str("STDERR:\n");
-                    result_text.push_str(&stderr);
-                }
-                if result_text.is_empty() {
-                    result_text = format!("Command completed with exit code {exit_code}");
-                }
-
-                // Truncate very long output
-                if result_text.len() > 30000 {
-                    let cutoff = floor_char_boundary(&result_text, 30000);
-                    result_text.truncate(cutoff);
-                    result_text.push_str("\n... (output truncated)");
-                }
-
-                if exit_code == 0 {
-                    ToolResult::success(result_text).with_status_code(exit_code)
-                } else {
-                    ToolResult::error(format!("Exit code {exit_code}\n{result_text}"))
-                        .with_status_code(exit_code)
-                        .with_error_type("process_exit")
-                }
-            }
-            Ok(Err(e)) => ToolResult::error(format!("Failed to execute browser: {e}"))
-                .with_error_type("spawn_error"),
-            Err(_) => ToolResult::error(format!(
-                "Browser command timed out after {timeout_secs} seconds"
-            ))
-            .with_error_type("timeout"),
         }
     }
 }

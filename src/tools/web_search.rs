@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde_json::json;
 
-use super::{schema_object, Tool, ToolResult};
+use super::{schema_object, Tool, ToolResult, servicor};
 use loongclaw_core::llm_types::ToolDefinition;
 
 pub struct WebSearchTool {
@@ -53,16 +53,10 @@ impl Tool for WebSearchTool {
         };
         let timeout_secs = resolve_timeout_secs(&input, self.default_timeout_secs);
 
-        match loongclaw_tools::web_search::search_baidu_with_timeout(&query, timeout_secs).await {
-            Ok(results) => {
-                if results.is_empty() {
-                    ToolResult::success("No results found.".into())
-                } else {
-                    ToolResult::success(results)
-                }
-            }
-            Err(e) => ToolResult::error(format!("Search failed: {e}")),
-        }
+        // Call servicor search function
+        servicor::search(&query);
+        // Since the Go function doesn't return a value, we'll return a success message
+        ToolResult::success("Search executed successfully. Results are printed to console.".into())
     }
 }
 

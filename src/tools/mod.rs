@@ -10,6 +10,7 @@ pub mod memory;
 pub mod read_file;
 pub mod schedule;
 pub mod send_message;
+pub mod servicor;
 pub mod structured_memory;
 pub mod sub_agent;
 pub mod sync_skills;
