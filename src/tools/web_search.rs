@@ -4,8 +4,6 @@ use serde_json::json;
 use super::{schema_object, Tool, ToolResult, servicor};
 use loongclaw_core::llm_types::ToolDefinition;
 
-mod servicor;
-
 pub struct WebSearchTool {
     default_timeout_secs: u64,
 }

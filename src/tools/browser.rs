@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 use serde_json::json;
+use tracing::info;
 
 use loongclaw_core::llm_types::ToolDefinition;
 use loongclaw_core::text::floor_char_boundary;
