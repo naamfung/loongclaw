@@ -80,6 +80,9 @@ fn default_sandbox_image() -> String {
 fn default_sandbox_container_prefix() -> String {
     "loongclaw-sandbox".into()
 }
+fn default_browser_executable_path() -> Option<String> {
+    None
+}
 fn default_timezone() -> String {
     "UTC".into()
 }
@@ -221,6 +224,8 @@ pub struct Config {
     pub default_mcp_request_timeout_secs: u64,
     #[serde(default)]
     pub show_thinking: bool,
+    #[serde(default = "default_browser_executable_path")]
+    pub browser_executable_path: Option<String>,
     /// OpenAI-compatible request-body overrides applied for all models/providers.
     /// Set a key to `null` to remove that field from the outgoing JSON body.
     #[serde(default)]
