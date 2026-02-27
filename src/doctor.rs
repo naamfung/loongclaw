@@ -1088,7 +1088,7 @@ fn check_sandbox_image(report: &mut DoctorReport) {
             "Sandbox image",
             CheckStatus::Warn,
             "sandbox.image is empty".to_string(),
-            Some("Set sandbox.image to a valid image tag (for example: ubuntu:25.10).".to_string()),
+            Some("Set sandbox.image to a valid image tag (for example: alpine:latest).".to_string()),
         );
         return;
     }

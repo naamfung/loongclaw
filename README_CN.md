@@ -603,7 +603,7 @@ loongclaw doctor sandbox
 sandbox:
   mode: "all"
   backend: "auto"
-  image: "ubuntu:25.10"
+  image: "alpine:latest"
   container_prefix: "loongclaw-sandbox"
   no_network: true
   require_runtime: false
@@ -615,7 +615,7 @@ sandbox:
 
 ```sh
 docker info
-docker run --rm ubuntu:25.10 echo ok
+docker run --rm alpine:latest echo ok
 loongclaw start
 ```
 

@@ -18,7 +18,7 @@ fn default_sandbox_backend() -> SandboxBackend {
 }
 
 fn default_sandbox_image() -> String {
-    "ubuntu:25.10".to_string()
+    "alpine:latest".to_string()
 }
 
 fn default_sandbox_container_prefix() -> String {

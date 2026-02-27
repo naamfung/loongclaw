@@ -75,7 +75,7 @@ fn default_high_risk_tool_user_confirmation_required() -> bool {
     true
 }
 fn default_sandbox_image() -> String {
-    "ubuntu:25.10".into()
+    "alpine:latest".into()
 }
 fn default_sandbox_container_prefix() -> String {
     "loongclaw-sandbox".into()
@@ -330,11 +330,6 @@ pub struct Config {
     /// Example: "whisper-mlx --file {file}" or "/usr/local/bin/whisper {file}"
     #[serde(default, rename = "voice_transcription_command")]
     pub voice_transcription_command: Option<String>,
-
-    // --- Browser ---
-    /// Path to browser executable (e.g. "/usr/bin/chromium-browser" or "C:/Program Files/Google/Chrome/chrome.exe")
-    #[serde(default, rename = "browser_executable_path")]
-    pub browser_executable_path: Option<String>,
 
     // --- Channel registry (new dynamic config) ---
     /// Per-channel configuration. Keys are channel names (e.g. "telegram", "discord", "slack", "irc", "web").
@@ -1211,7 +1206,7 @@ voice_transcription_command: "whisper-mlx --file {file}"
         let config: Config = serde_yaml::from_str(yaml).unwrap();
         assert!(matches!(config.sandbox.mode, SandboxMode::Off));
         assert!(matches!(config.sandbox.backend, SandboxBackend::Auto));
-        assert_eq!(config.sandbox.image, "ubuntu:25.10");
+        assert_eq!(config.sandbox.image, "alpine:latest");
     }
 
     #[test]

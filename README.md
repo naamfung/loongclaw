@@ -851,7 +851,7 @@ sandbox:
   security_profile: "hardened" # optional; hardened|standard|privileged, default hardened
   # optional capability overrides (applies to hardened/standard)
   # cap_add: ["SETUID", "SETGID", "CHOWN"]
-  image: "ubuntu:25.10"
+  image: "alpine:latest"
   container_prefix: "loongclaw-sandbox"
   no_network: true
   require_runtime: false
@@ -863,7 +863,7 @@ How to test:
 
 ```sh
 docker info
-docker run --rm ubuntu:25.10 echo ok
+docker run --rm alpine:latest echo ok
 loongclaw start
 ```
 
