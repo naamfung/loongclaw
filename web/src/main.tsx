@@ -153,33 +153,10 @@ type ConfigSelfCheck = {
   security_posture?: SecurityPosture
 }
 
-const DOCS_BASE = 'https://loongclaw.ai/docs'
+const DOCS_BASE = ''
 
 function warningDocUrl(code?: string): string {
-  switch (code) {
-    case 'sandbox_disabled':
-    case 'sandbox_runtime_unavailable':
-    case 'sandbox_mount_allowlist_missing':
-      return `${DOCS_BASE}/configuration#sandbox`
-    case 'auth_password_not_configured':
-    case 'legacy_auth_token_enabled':
-    case 'web_host_not_loopback':
-      return `${DOCS_BASE}/permissions`
-    case 'web_rate_limit_too_high':
-    case 'web_inflight_limit_too_high':
-    case 'web_rate_window_too_small_for_limit':
-    case 'web_session_idle_ttl_too_low':
-      return `${DOCS_BASE}/configuration#web`
-    case 'hooks_max_input_bytes_too_high':
-    case 'hooks_max_output_bytes_too_high':
-      return `${DOCS_BASE}/hooks`
-    case 'otlp_enabled_without_endpoint':
-    case 'otlp_queue_capacity_low':
-    case 'otlp_retry_attempts_too_low':
-      return `${DOCS_BASE}/observability`
-    default:
-      return `${DOCS_BASE}/configuration`
-  }
+  return ''
 }
 
 type ToolStartPayload = {

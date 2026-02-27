@@ -2,14 +2,15 @@
 
 [English](README.md) | [中文](README_CN.md)
 
-[![Website](https://img.shields.io/badge/Website-loongclaw.ai-blue)](https://loongclaw.ai)
 [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/pvmezwkAk5)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 
 
 <p align="center">
   <img src="screenshots/headline.png" alt="LoongClaw headline logo" width="92%" />
 </p>
+
 
 
 > **注意：** 本项目正在积极开发中，功能可能会变化，欢迎贡献！
@@ -18,11 +19,6 @@
 一个住在聊天平台里的 AI 智能助手，灵感来自 [nanoclaw](https://github.com/gavrielc/nanoclaw/)，参考了 nanoclaw 的部分思路。LoongClaw 采用“渠道无关核心 + 平台适配器”架构：当前支持 Telegram、Discord、Slack、飞书/Lark、Matrix、WhatsApp、iMessage、Email、Nostr、Signal、DingTalk、QQ、IRC 和 Web，后续可持续扩展更多平台。它支持完整的工具执行：运行 Shell 命令、读写编辑文件、搜索代码库、浏览网页、定时任务、持久化记忆等。
 
 
-<p align="center">
-  <img src="screenshots/screenshot1.png" width="45%" />
-  &nbsp;&nbsp;
-  <img src="screenshots/screenshot2.png" width="45%" />
-</p>
 
 ## 目录
 
@@ -48,69 +44,10 @@
 
 ## 安装
 
-### 一键安装（推荐）
-
-```sh
-curl -fsSL https://loongclaw.ai/install.sh | bash
-```
-
-### Windows PowerShell 安装
-
-```powershell
-iwr https://loongclaw.ai/install.ps1 -UseBasicParsing | iex
-```
-
-安装脚本仅执行一种方式：
-- 从最新 GitHub Release 下载匹配平台的预编译二进制
-- 不在 `install.sh` 内回退到 Homebrew/Cargo（请使用下面的独立方式）
-
-### 预检诊断（doctor）
-
-在首次启动或排障时，先运行跨平台诊断：
-
-```sh
-loongclaw doctor
-```
-
-如果要提交支持工单，建议附加机器可读输出：
-
-```sh
-loongclaw doctor --json
-```
-
-会检查：PATH、shell 运行时、浏览器可执行文件、Windows PowerShell 执行策略、以及 `<data_dir>/mcp.json` + `<data_dir>/mcp.d/*.json` 里的 MCP 依赖。
-
-仅沙箱诊断：
-
-```sh
-loongclaw doctor sandbox
-```
-
-### 卸载（脚本）
-
-macOS/Linux：
-
-```sh
-curl -fsSL https://loongclaw.ai/uninstall.sh | bash
-```
-
-Windows PowerShell：
-
-```powershell
-iwr https://loongclaw.ai/uninstall.ps1 -UseBasicParsing | iex
-```
-
-### Homebrew (macOS)
-
-```sh
-brew tap loongclaw/tap
-brew install loongclaw
-```
-
 ### 从源码构建
 
 ```sh
-git clone https://github.com/loongclaw/loongclaw.git
+git clone https://github.com/naamfung/loongclaw.git --depth=1
 cd loongclaw
 cargo build --release
 cp target/release/loongclaw /usr/local/bin/
@@ -134,6 +71,28 @@ sqlite3 <data_dir>/runtime/loongclaw.db "SELECT id, chat_id, chat_channel, exter
 - `embedding_provider` = `openai` 或 `ollama`
 - 对应 provider 的 key/base URL/model
 
+### 预检诊断（doctor）
+
+在首次启动或排障时，先运行跨平台诊断：
+
+```sh
+loongclaw doctor
+```
+
+如果要提交支持工单，建议附加机器可读输出：
+
+```sh
+loongclaw doctor --json
+```
+
+会检查：PATH、shell 运行时、浏览器可执行文件、Windows PowerShell 执行策略、以及 `<data_dir>/mcp.json` + `<data_dir>/mcp.d/*.json` 里的 MCP 依赖。
+
+仅沙箱诊断：
+
+```sh
+loongclaw doctor sandbox
+```
+
 ## 工作原理
 
 每条消息触发一个 **智能体循环**：模型可以调用工具、检查结果、再调用更多工具，经过多步推理后再回复。默认每次请求最多 100 次迭代。
@@ -141,10 +100,6 @@ sqlite3 <data_dir>/runtime/loongclaw.db "SELECT id, chat_id, chat_channel, exter
 <p align="center">
   <img src="docs/assets/readme/loongclaw-architecture.svg" alt="LoongClaw 架构总览" width="96%" />
 </p>
-
-## 博客文章
-
-关于项目架构与设计取舍的介绍文章：**[Building LoongClaw: An Agentic AI Assistant in Rust That Lives in Your Chats](https://loongclaw.ai/blog/building-loongclaw)**
 
 ## 功能特性
 

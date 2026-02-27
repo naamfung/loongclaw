@@ -3,7 +3,6 @@
 
 [English](README.md) | [中文](README_CN.md)
 
-[![Website](https://img.shields.io/badge/Website-loongclaw.ai-blue)](https://loongclaw.ai)
 [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/pvmezwkAk5)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -19,11 +18,6 @@
 An agentic AI assistant for chat surfaces, inspired by [nanoclaw](https://github.com/gavrielc/nanoclaw/) and incorporating some of its design ideas. LoongClaw uses a channel-agnostic core with platform adapters: it currently supports Telegram, Discord, Slack, Feishu/Lark, Matrix, WhatsApp, iMessage, Email, Nostr, Signal, DingTalk, QQ, IRC, and Web, and is designed to add more platforms over time. It works with multiple LLM providers (Anthropic + OpenAI-compatible APIs) and supports full tool execution: run shell commands, read/write/edit files, search codebases, browse the web, schedule tasks, and maintain persistent memory across conversations.
 
 
-<p align="center">
-  <img src="screenshots/screenshot1.png" width="45%" />
-  &nbsp;&nbsp;
-  <img src="screenshots/screenshot2.png" width="45%" />
-</p>
 
 ## Table of contents
 
@@ -51,21 +45,14 @@ An agentic AI assistant for chat surfaces, inspired by [nanoclaw](https://github
 
 ## Install
 
-### One-line installer (recommended)
+### From source
 
 ```sh
-curl -fsSL https://loongclaw.ai/install.sh | bash
+git clone https://github.com/naamfung/loongclaw.git --depth=1
+cd loongclaw
+cargo build --release
+cp target/release/loongclaw /usr/local/bin/
 ```
-
-### Windows PowerShell installer
-
-```powershell
-iwr https://loongclaw.ai/install.ps1 -UseBasicParsing | iex
-```
-
-This installer only does one thing:
-- Download and install the matching prebuilt binary from the latest GitHub release
-- It does not fallback to Homebrew/Cargo inside `install.sh` (use separate methods below)
 
 ### Preflight diagnostics
 
@@ -87,36 +74,6 @@ Sandbox-only diagnostics:
 
 ```sh
 loongclaw doctor sandbox
-```
-
-### Uninstall (script)
-
-macOS/Linux:
-
-```sh
-curl -fsSL https://loongclaw.ai/uninstall.sh | bash
-```
-
-Windows PowerShell:
-
-```powershell
-iwr https://loongclaw.ai/uninstall.ps1 -UseBasicParsing | iex
-```
-
-### Homebrew (macOS)
-
-```sh
-brew tap loongclaw/tap
-brew install loongclaw
-```
-
-### From source
-
-```sh
-git clone https://github.com/loongclaw/loongclaw.git
-cd loongclaw
-cargo build --release
-cp target/release/loongclaw /usr/local/bin/
 ```
 
 Optional semantic-memory build (sqlite-vec disabled by default):
@@ -147,7 +104,7 @@ Every message triggers an **agentic loop**: the model can call tools, inspect th
 
 ## Blog post
 
-For a deeper dive into the architecture and design decisions, read: **[Building LoongClaw: An Agentic AI Assistant in Rust That Lives in Your Chats](https://loongclaw.ai/blog/building-loongclaw)**
+For a deeper dive into the architecture and design decisions, see the project documentation.
 
 ## Features
 

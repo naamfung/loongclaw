@@ -275,14 +275,6 @@ export function SessionSidebar({
           Runtime Config
         </Button>
         <div className="mt-3 flex items-center justify-between gap-3">
-          <a
-            href="https://loongclaw.ai"
-            target="_blank"
-            rel="noreferrer"
-            className={isDark ? 'text-xs text-slate-400 hover:text-slate-200' : 'text-xs text-slate-600 hover:text-slate-900'}
-          >
-            loongclaw.ai
-          </a>
           <Text size="1" className={isDark ? 'text-slate-500' : 'text-slate-500'}>
             {appVersion ? `v${appVersion}` : 'v--'}
           </Text>
