@@ -718,4 +718,4 @@ MIT
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=loongclaw/loongclaw&type=Date)](https://star-history.com/#loongclaw/loongclaw&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=naamfung/loongclaw&type=Date)](https://star-history.com/#naamfung/loongclaw&Date)
