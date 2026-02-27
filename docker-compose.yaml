@@ -1,0 +1,21 @@
+services:
+  loongclaw:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: loongclaw
+    command: ["loongclaw", "start"]
+    stdin_open: true
+    tty: true
+    init: true
+    restart: unless-stopped
+    volumes:
+      - ./loongclaw.config.yaml:/app/loongclaw.config.yaml:ro
+      # Default data_dir resolves to ~/.loongclaw; persist it on the host.
+      - ./data:/home/loongclaw/.loongclaw
+      - ./tmp:/app/tmp
+    environment:
+      - RUST_LOG=info
+      - HOME=/home/loongclaw
+    ports:
+      - "127.0.0.1:10961:10961" # Uncomment and adjust if you plan to use LoongClaw's web UI

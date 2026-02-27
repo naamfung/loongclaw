@@ -1,0 +1,12 @@
+[package]
+name = "loongclaw-channels"
+version = "0.0.80"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+loongclaw-storage = { path = "../loongclaw-storage" }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
