@@ -1,20 +1,20 @@
 fn main() {
-    // 编译Go代码为静态库
-    let output = std::process::Command::new("go")
-        .args(&["build", "-buildmode=c-archive", "-o", "services/libservicor.a", "services/servicor_c.go"])
-        .output()
-        .expect("Failed to compile Go code");
+    // Rebuild when embedded frontend assets change.
+    println!("cargo:rerun-if-changed=web/dist");
+    // Keep builtin skills embedding in sync as well.
+    println!("cargo:rerun-if-changed=skills/built-in");
     
-    if !output.status.success() {
-        panic!("Failed to compile Go code: {}", String::from_utf8_lossy(&output.stderr));
+    // Link against the Go static library
+    println!("cargo:rustc-link-search=native=services");
+    println!("cargo:rustc-link-lib=static=servico");
+    println!("cargo:rustc-link-lib=dylib=pthread");
+    
+    // Only link dl on non-Windows platforms
+    if cfg!(not(target_os = "windows")) {
+        println!("cargo:rustc-link-lib=dylib=dl");
     }
     
-    // 告诉Rust编译器在哪里找到静态库
-    println!("cargo:rustc-link-search=native=services");
-    println!("cargo:rustc-link-lib=static=servicor");
-    println!("cargo:rustc-link-lib=pthread");
-    
-    // 告诉Cargo当Go代码变化时重新构建
-    println!("cargo:rerun-if-changed=services/servicor.go");
-    println!("cargo:rerun-if-changed=services/servicor_c.go");
+    // Rebuild when the static library changes
+    println!("cargo:rerun-if-changed=services/libservico.a");
+    println!("cargo:rerun-if-changed=services/libservico.h");
 }

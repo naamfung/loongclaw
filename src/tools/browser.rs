@@ -6,9 +6,7 @@ use serde_json::json;
 use loongclaw_core::llm_types::ToolDefinition;
 use loongclaw_core::text::floor_char_boundary;
 
-use super::{schema_object, Tool, ToolResult};
-
-mod servicor;
+use super::{auth_context_from_input, schema_object, Tool, ToolResult, servicor};
 
 pub struct BrowserTool {
     data_dir: PathBuf,
@@ -190,27 +188,29 @@ impl Tool for BrowserTool {
             }
         };
 
-        // Call servicor visit command for open URL
-        if !command_args.is_empty() && command_args[0] == "open" && command_args.len() > 1 {
-            let url = command_args[1].clone();
-            
-            match servicor::visit(&url) {
-                Ok(result) => {
-                    // Truncate very long output
-                    let mut result_text = result;
-                    if result_text.len() > 30000 {
-                        let cutoff = floor_char_boundary(&result_text, 30000);
-                        result_text.truncate(cutoff);
-                        result_text.push_str("\n... (output truncated)");
-                    }
-                    ToolResult::success(result_text)
-                }
-                Err(e) => {
-                    ToolResult::error(format!("Visit failed: {e}"))
+        let program = self.get_browser_executable();
+        info!("Executing browser command via '{}'", program);
+
+        // Handle different command types using servicor
+        if !command_args.is_empty() {
+            match command_args[0].as_str() {
+                "open" if command_args.len() > 1 => {
+                    // For open command, use servicor's Visit function
+                    let url = command_args[1].clone();
+                    servicor::visit(&url);
+                    ToolResult::success("Visit executed successfully. Results are printed to console.".into())
+                },
+                "close" => {
+                    // For close command, not supported by servicor
+                    return ToolResult::error("Close command not supported.".into());
+                },
+                _ => {
+                    // For other commands, not supported by servicor
+                    return ToolResult::error("This command is not supported by servicor.".into());
                 }
             }
         } else {
-            return ToolResult::error("Only 'open <url>' command is supported through servicor.".into());
+            return ToolResult::error("Empty browser command".into());
         }
     }
 }

@@ -1,5 +1,7 @@
 package main
 
+import "C" // 必须导入以启用 cgo
+
 import (
 	"context"
 	"fmt"
@@ -15,26 +17,14 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-/*
-使用方法如下：
+// main 函数必须存在，即使为空
+func main() {}
 
-- 搜索： ./servicor search "搜索关键词"
-- 访问： ./servicor visit "http://example.com"
-- 下载小说： ./servicor download "http://example.com" （指定小说目录页URL）
-*/
-func main() {
-	// 设置随机种子，确保每次运行时生成不同的随机数
-	rand.Seed(time.Now().UnixNano())
-
-	if len(os.Args) < 3 {
-		fmt.Print("Usage:\n\t./servicor search \"搜索关键词\"\n\t./servicor visit \"http://example.com\"\n\t./servicor download \"http://example.com\"\n")
-		log.Fatal("\n")
-	}
-
-	command := os.Args[1]
-	input := os.Args[2]
-
-	// 创建一个新的 ExecAllocator
+// 导出搜索功能
+//
+//export Search
+func Search(keyword *C.char) {
+	goKeyword := C.GoString(keyword)
 	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(),
 		chromedp.NoFirstRun,
 		chromedp.NoDefaultBrowserCheck,
@@ -43,29 +33,63 @@ func main() {
 	)
 	defer cancelAlloc()
 
-	// 创建一个新的 context 使用上面的 AllocAllocator
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
-	switch command {
-	case "search":
-		// 搜索模式：设置60秒超时
-		ctxTimeout, cancelTimeout := context.WithTimeout(ctx, 60*time.Second)
-		defer cancelTimeout()
-		searchURL := fmt.Sprintf("https://www.baidu.com/s?ie=UTF-8&wd=%s", input)
-		search(ctxTimeout, searchURL)
-	case "visit":
-		// 访问模式：设置60秒超时
-		ctxTimeout, cancelTimeout := context.WithTimeout(ctx, 60*time.Second)
-		defer cancelTimeout()
-		visitURL(ctxTimeout, input)
-	case "download":
-		// 下载模式：不使用超时
-		downloadNovel(ctx, input)
-	default:
-		log.Fatalf("未知命令: %s\n可用命令: search, visit, download", command)
-	}
+	ctxTimeout, cancelTimeout := context.WithTimeout(ctx, 60*time.Second)
+	defer cancelTimeout()
+
+	searchURL := fmt.Sprintf("https://www.baidu.com/s?ie=UTF-8&wd=%s", goKeyword)
+	search(ctxTimeout, searchURL)
 }
+
+// 导出访问功能
+//
+//export Visit
+func Visit(url *C.char) {
+	goURL := C.GoString(url)
+	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(),
+		chromedp.NoFirstRun,
+		chromedp.NoDefaultBrowserCheck,
+		chromedp.Headless,
+		//chromedp.DisableGPU,
+	)
+	defer cancelAlloc()
+
+	ctx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+
+	ctxTimeout, cancelTimeout := context.WithTimeout(ctx, 60*time.Second)
+	defer cancelTimeout()
+
+	visitURL(ctxTimeout, goURL)
+}
+
+// 导出下载功能
+//
+//export Download
+func Download(novelURL *C.char) {
+	goURL := C.GoString(novelURL)
+	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(),
+		chromedp.NoFirstRun,
+		chromedp.NoDefaultBrowserCheck,
+		chromedp.Headless,
+		//chromedp.DisableGPU,
+	)
+	defer cancelAlloc()
+
+	ctx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+
+	// 下载可能耗时较长，不使用超时
+	downloadNovel(ctx, goURL)
+}
+
+// -------------------------------------------------------------------
+// 以下为原有的业务函数，未作逻辑修改，仅移除对 os.Args 的依赖
+// 注意：函数内部使用了 log.Fatal，在作为库调用时会导致进程退出
+// 建议后续改为返回错误并通过其他方式传递
+// -------------------------------------------------------------------
 
 // 搜索功能
 func search(ctx context.Context, searchURL string) {
@@ -127,21 +151,21 @@ func visitURL(ctx context.Context, url string) {
 			// 获取整个页面的文本内容，排除<script>和<style>标签以及特定的class
 			var textContent string
 			err := chromedp.Evaluate(`
-				function getTextContentWithoutScriptsAndStyles() {
-					const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
-					let text = '';
-					while (walker.nextNode()) {
-						const node = walker.currentNode;
-						if (!node.parentElement.matches('script, style, .confirm-dialog') &&
-							window.getComputedStyle(node.parentElement).display !== 'none' &&
-							window.getComputedStyle(node.parentElement).visibility !== 'hidden') {
-							text += node.nodeValue.trim() + ' ';
-						}
-					}
-					return text.trim();
-				}
-				getTextContentWithoutScriptsAndStyles()
-			`, &textContent).Do(ctx)
+                function getTextContentWithoutScriptsAndStyles() {
+                    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+                    let text = '';
+                    while (walker.nextNode()) {
+                        const node = walker.currentNode;
+                        if (!node.parentElement.matches('script, style, .confirm-dialog') &&
+                            window.getComputedStyle(node.parentElement).display !== 'none' &&
+                            window.getComputedStyle(node.parentElement).visibility !== 'hidden') {
+                            text += node.nodeValue.trim() + ' ';
+                        }
+                    }
+                    return text.trim();
+                }
+                getTextContentWithoutScriptsAndStyles()
+            `, &textContent).Do(ctx)
 			if err != nil {
 				return err
 			}
@@ -285,66 +309,66 @@ func downloadNovel(ctx context.Context, novelURL string) {
 
 			// 查找第1章的链接 - 使用更宽松的正则表达式
 			erro := chromedp.Evaluate(`
-						function findFirstChapter() {
-							const links = Array.from(document.querySelectorAll('a'));
-							// 尝试多种模式查找第1章
-							const patterns = [
-								/^第1[章节回集]/,
-								/^1[章节回集]/,
-								/^第一章/,
-								/^第一卷/,
-								/^首章/,
-								/^开始阅读/
-							];
-							
-							// 先尝试找到明确的第1章
-							let link = null;
-							for (const pattern of patterns) {
-								link = links.find(a => {
-									const text = a.textContent.trim();
-									return pattern.test(text) && a.href && !text.includes('目录') && !text.includes('index');
-								});
-								if (link) break;
-							}
-							
-							// 如果找不到明确的第1章，尝试找第一个看起来像章节的链接
-							if (!link) {
-								const chapterPattern = /[第卷]([\d一二三四五六七八九十百千]+)[章节回集]/;
-								const chapterLinks = links.filter(a => 
-									a.href && 
-									chapterPattern.test(a.textContent.trim()) && 
-									!a.textContent.includes('目录') && 
-									!a.textContent.includes('index')
-								);
-								if (chapterLinks.length > 0) {
-									link = chapterLinks[0];
-								}
-							}
-							
-							// 如果还是找不到，尝试找第一个可能是章节列表的容器，然后从里面找第一个链接
-							if (!link) {
-								const chapterContainers = document.querySelectorAll(
-									'.list, .chapter-list, .novel-list, ul, ol'
-								);
-								for (const container of chapterContainers) {
-									const containerLinks = container.querySelectorAll('a');
-									if (containerLinks.length > 5) { // 假设章节列表至少有5个链接
-										link = containerLinks[0];
-										break;
-									}
-								}
-							}
-							
-							if (link) {
-								return {
-									href: link.href,
-									text: link.textContent.trim()
-								};
-							}
-							return null;
-						}
-						findFirstChapter()
-					`, &chapterResult).Do(ctx)
+                function findFirstChapter() {
+                    const links = Array.from(document.querySelectorAll('a'));
+                    // 尝试多种模式查找第1章
+                    const patterns = [
+                        /^第1[章节回集]/,
+                        /^1[章节回集]/,
+                        /^第一章/,
+                        /^第一卷/,
+                        /^首章/,
+                        /^开始阅读/
+                    ];
+
+                    // 先尝试找到明确的第1章
+                    let link = null;
+                    for (const pattern of patterns) {
+                        link = links.find(a => {
+                            const text = a.textContent.trim();
+                            return pattern.test(text) && a.href && !text.includes('目录') && !text.includes('index');
+                        });
+                        if (link) break;
+                    }
+
+                    // 如果找不到明确的第1章，尝试找第一个看起来像章节的链接
+                    if (!link) {
+                        const chapterPattern = /[第卷]([\d一二三四五六七八九十百千]+)[章节回集]/;
+                        const chapterLinks = links.filter(a =>
+                            a.href &&
+                            chapterPattern.test(a.textContent.trim()) &&
+                            !a.textContent.includes('目录') &&
+                            !a.textContent.includes('index')
+                        );
+                        if (chapterLinks.length > 0) {
+                            link = chapterLinks[0];
+                        }
+                    }
+
+                    // 如果还是找不到，尝试找第一个可能是章节列表的容器，然后从里面找第一个链接
+                    if (!link) {
+                        const chapterContainers = document.querySelectorAll(
+                            '.list, .chapter-list, .novel-list, ul, ol'
+                        );
+                        for (const container of chapterContainers) {
+                            const containerLinks = container.querySelectorAll('a');
+                            if (containerLinks.length > 5) { // 假设章节列表至少有5个链接
+                                link = containerLinks[0];
+                                break;
+                            }
+                        }
+                    }
+
+                    if (link) {
+                        return {
+                            href: link.href,
+                            text: link.textContent.trim()
+                        };
+                    }
+                    return null;
+                }
+                findFirstChapter()
+            `, &chapterResult).Do(ctx)
 
 			if erro == nil && chapterResult.Href != "" {
 				// 确保链接是绝对路径
@@ -513,38 +537,38 @@ func downloadNovel(ctx context.Context, novelURL string) {
 		} else {
 			// 尝试从页面内容中提取更准确的章节标题
 			err = chromedp.Run(chapterCtx, chromedp.Evaluate(`
-				function extractChapterTitle() {
-					// 首先检查h1-h3标题标签中是否有章节标题
-					let chapterTitle = null;
-					const titleElements = Array.from(document.querySelectorAll('h1, h2, h3'));
-					const chapterPattern = /第\d+[章节回]/;
-					
-					for (const element of titleElements) {
-						if (chapterPattern.test(element.textContent.trim())) {
-							chapterTitle = element.textContent.trim();
-							break;
-						}
-					}
-					
-					// 如果没找到，再检查body中的文本节点
-					if (!chapterTitle) {
-						const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
-						let text = '';
-						while (walker.nextNode()) {
-							const node = walker.currentNode;
-							text += node.nodeValue;
-						}
-						
-						const match = text.match(/第\d+[章节回][^\n]+/);
-						if (match && match[0]) {
-							chapterTitle = match[0].trim();
-						}
-					}
-					
-					return chapterTitle;
-				}
-			extractChapterTitle()
-		`, &extractedTitle))
+                function extractChapterTitle() {
+                    // 首先检查h1-h3标题标签中是否有章节标题
+                    let chapterTitle = null;
+                    const titleElements = Array.from(document.querySelectorAll('h1, h2, h3'));
+                    const chapterPattern = /第\d+[章节回]/;
+
+                    for (const element of titleElements) {
+                        if (chapterPattern.test(element.textContent.trim())) {
+                            chapterTitle = element.textContent.trim();
+                            break;
+                        }
+                    }
+
+                    // 如果没找到，再检查body中的文本节点
+                    if (!chapterTitle) {
+                        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+                        let text = '';
+                        while (walker.nextNode()) {
+                            const node = walker.currentNode;
+                            text += node.nodeValue;
+                        }
+
+                        const match = text.match(/第\d+[章节回][^\n]+/);
+                        if (match && match[0]) {
+                            chapterTitle = match[0].trim();
+                        }
+                    }
+
+                    return chapterTitle;
+                }
+                extractChapterTitle()
+            `, &extractedTitle))
 			// 尝试从页面内容中提取更准确的章节标题
 			if err == nil && extractedTitle != "" {
 				currentChapterTitle = extractedTitle
@@ -580,125 +604,125 @@ func downloadNovel(ctx context.Context, novelURL string) {
 			chromedp.ActionFunc(func(ctx context.Context) error {
 				var content string
 				erro := chromedp.Evaluate(`
-            function getChapterContent() {
-                // 尝试找到包含大量连续文本且包含多个段落的容器
-                const elements = document.querySelectorAll('div, article, section, span, pre, li, blockquote, main');
-                let bestCandidate = null;
-                let maxTextLength = 0;
+                    function getChapterContent() {
+                        // 尝试找到包含大量连续文本且包含多个段落的容器
+                        const elements = document.querySelectorAll('div, article, section, span, pre, li, blockquote, main');
+                        let bestCandidate = null;
+                        let maxTextLength = 0;
 
-                for (const element of elements) {
-                    // 跳过隐藏元素和不需要的元素
-                    if (window.getComputedStyle(element).display === 'none' ||
-                        window.getComputedStyle(element).visibility === 'hidden' ||
-                        window.getComputedStyle(element).opacity === '0' ||
-                        element.matches('script, style, .confirm-dialog, nav, footer, header, aside')) {
-                        continue;
-                    }
+                        for (const element of elements) {
+                            // 跳过隐藏元素和不需要的元素
+                            if (window.getComputedStyle(element).display === 'none' ||
+                                window.getComputedStyle(element).visibility === 'hidden' ||
+                                window.getComputedStyle(element).opacity === '0' ||
+                                element.matches('script, style, .confirm-dialog, nav, footer, header, aside')) {
+                                continue;
+                            }
 
-                    const text = element.textContent.trim();
-                    const textLength = text.length;
+                            const text = element.textContent.trim();
+                            const textLength = text.length;
 
-					//跳过：条件1：同一行内同时包含「作者：」「分类：」「更新：」「字数：」的容器
-					if (text.includes('作者：') && text.includes('分类：') && text.includes('更新：') && text.includes('字数：')) {
-						continue;
-					}
+                            //跳过：条件1：同一行内同时包含「作者：」「分类：」「更新：」「字数：」的容器
+                            if (text.includes('作者：') && text.includes('分类：') && text.includes('更新：') && text.includes('字数：')) {
+                                continue;
+                            }
 
-					//跳过：条件2：同一行内同时包含｛「上一章」或「上一页」｝「目录」｛「下一章」或「下一页」｝的容器
-					if ((text.includes('上一章')||text.includes('上一页')) && text.includes('目录') && (text.includes('下一章')||text.includes('下一页'))) {
-						continue;
-					}
+                            //跳过：条件2：同一行内同时包含｛「上一章」或「上一页」｝「目录」｛「下一章」或「下一页」｝的容器
+                            if ((text.includes('上一章')||text.includes('上一页')) && text.includes('目录') && (text.includes('下一章')||text.includes('下一页'))) {
+                                continue;
+                            }
 
-					//跳过：条件3：包含「投推荐票」或「加入书签」的容器
-					if (text.includes('投推荐票')||text.includes('加入书签')) {
-						continue;
-					}
+                            //跳过：条件3：包含「投推荐票」或「加入书签」的容器
+                            if (text.includes('投推荐票')||text.includes('加入书签')) {
+                                continue;
+                            }
 
-                    // 如果文本长度足够长，并且比当前最佳候选更长
-                    if (textLength > 300 && textLength > maxTextLength) {
-                        // 检查文本质量：连续文本比例和段落数量
-                        const lineBreakCount = (text.match(/\n/g) || []).length;
-                        const paragraphCount = lineBreakCount + 1; // 假设每行一个段落
+                            // 如果文本长度足够长，并且比当前最佳候选更长
+                            if (textLength > 300 && textLength > maxTextLength) {
+                                // 检查文本质量：连续文本比例和段落数量
+                                const lineBreakCount = (text.match(/\n/g) || []).length;
+                                const paragraphCount = lineBreakCount + 1; // 假设每行一个段落
 
-                        // 如果文本质量较好，更新最佳候选
-                        if (textLength / paragraphCount > 50) {
-                            bestCandidate = element;
-                            maxTextLength = textLength;
+                                // 如果文本质量较好，更新最佳候选
+                                if (textLength / paragraphCount > 50) {
+                                    bestCandidate = element;
+                                    maxTextLength = textLength;
+                                }
+                            }
                         }
-                    }
-                }
 
-				// 定义文末可能存在且须要被去除的无关内容
-                const delTextsOfEnd = ['上一章', '上一页', '目录', '目 录', '下一章', '下一页', '点击下一页继续阅读', '小说网更新速度全网最快。'];
+                        // 定义文末可能存在且须要被去除的无关内容
+                        const delTextsOfEnd = ['上一章', '上一页', '目录', '目 录', '下一章', '下一页', '点击下一页继续阅读', '小说网更新速度全网最快。'];
 
-                // 如果找到了合适的容器，提取其文本内容并保留段落格式
-                if (bestCandidate) {
-                    // 使用 TreeWalker 提取文本内容并保留段落格式
-                    const walker = document.createTreeWalker(bestCandidate, NodeFilter.SHOW_TEXT, null, false);
-                    let text = '';
-                    while (walker.nextNode()) {
-                        const node = walker.currentNode;
-                        if (!node.parentElement.matches('script, style, .confirm-dialog') &&
-                            window.getComputedStyle(node.parentElement).display !== 'none' &&
-                            window.getComputedStyle(node.parentElement).visibility !== 'hidden' &&
-                            window.getComputedStyle(node.parentElement).opacity !== '0') {
-                            text += node.nodeValue.trim() + '\n';
+                        // 如果找到了合适的容器，提取其文本内容并保留段落格式
+                        if (bestCandidate) {
+                            // 使用 TreeWalker 提取文本内容并保留段落格式
+                            const walker = document.createTreeWalker(bestCandidate, NodeFilter.SHOW_TEXT, null, false);
+                            let text = '';
+                            while (walker.nextNode()) {
+                                const node = walker.currentNode;
+                                if (!node.parentElement.matches('script, style, .confirm-dialog') &&
+                                    window.getComputedStyle(node.parentElement).display !== 'none' &&
+                                    window.getComputedStyle(node.parentElement).visibility !== 'hidden' &&
+                                    window.getComputedStyle(node.parentElement).opacity !== '0') {
+                                    text += node.nodeValue.trim() + '\n';
+                                }
+                            }
+                            // 清理多余的空白字符，但保留段落格式
+                            text = text.trim().replace(/[^\S\n]+/g, ' ');
+
+                            // 从正文末尾倒序检查并去除导航部分
+                            const lines = text.split('\n');
+                            let cleanedText = '';
+
+                            // 只检查最后的10行内容
+                            const startLine = Math.max(0, lines.length - 10);
+                            for (let i = lines.length - 1; i >= startLine; i--) {
+                                if (!delTextsOfEnd.some(navigationText => lines[i].trim().includes(navigationText))) {
+                                    cleanedText = lines[i] + (cleanedText ? '\n' + cleanedText : '');
+                                }
+                            }
+
+                            // 合并剩余的文本
+                            cleanedText = lines.slice(0, startLine).join('\n') + (cleanedText ? '\n' + cleanedText : '');
+
+                            return cleanedText.trim();
                         }
-                    }
-                    // 清理多余的空白字符，但保留段落格式
-                    text = text.trim().replace(/[^\S\n]+/g, ' ');
 
-                    // 从正文末尾倒序检查并去除导航部分
-                    const lines = text.split('\n');
-                    let cleanedText = '';
-
-                    // 只检查最后的10行内容
-                    const startLine = Math.max(0, lines.length - 10);
-                    for (let i = lines.length - 1; i >= startLine; i--) {
-                        if (!delTextsOfEnd.some(navigationText => lines[i].trim().includes(navigationText))) {
-                            cleanedText = lines[i] + (cleanedText ? '\n' + cleanedText : '');
+                        // 如果未有找到合适的容器，回退到原来的方法
+                        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+                        let text = '';
+                        while (walker.nextNode()) {
+                            const node = walker.currentNode;
+                            if (!node.parentElement.matches('script, style, .confirm-dialog, nav, footer, header, aside') &&
+                                window.getComputedStyle(node.parentElement).display !== 'none' &&
+                                window.getComputedStyle(node.parentElement).visibility !== 'hidden' &&
+                                window.getComputedStyle(node.parentElement).opacity !== '0') {
+                                text += node.nodeValue.trim() + '\n';
+                            }
                         }
+                        // 清理多余的空白字符，但保留段落格式
+                        text = text.trim().replace(/[^\S\n]+/g, ' ');
+
+                        // 从正文末尾倒序检查并去除导航部分
+                        const lines = text.split('\n');
+                        let cleanedText = '';
+
+                        // 只检查最后的10行内容
+                        const startLine = Math.max(0, lines.length - 10);
+                        for (let i = lines.length - 1; i >= startLine; i--) {
+                            if (!delTextsOfEnd.some(navigationText => lines[i].trim().includes(navigationText))) {
+                                cleanedText = lines[i] + (cleanedText ? '\n' + cleanedText : '');
+                            }
+                        }
+
+                        // 合并剩余的文本
+                        cleanedText = lines.slice(0, startLine).join('\n') + (cleanedText ? '\n' + cleanedText : '');
+
+                        return cleanedText.trim();
                     }
-
-                    // 合并剩余的文本
-                    cleanedText = lines.slice(0, startLine).join('\n') + (cleanedText ? '\n' + cleanedText : '');
-
-                    return cleanedText.trim();
-                }
-
-                // 如果未有找到合适的容器，回退到原来的方法
-                const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
-                let text = '';
-                while (walker.nextNode()) {
-                    const node = walker.currentNode;
-                    if (!node.parentElement.matches('script, style, .confirm-dialog, nav, footer, header, aside') &&
-                        window.getComputedStyle(node.parentElement).display !== 'none' &&
-                        window.getComputedStyle(node.parentElement).visibility !== 'hidden' &&
-                        window.getComputedStyle(node.parentElement).opacity !== '0') {
-                        text += node.nodeValue.trim() + '\n';
-                    }
-                }
-                // 清理多余的空白字符，但保留段落格式
-                text = text.trim().replace(/[^\S\n]+/g, ' ');
-
-                // 从正文末尾倒序检查并去除导航部分
-                const lines = text.split('\n');
-                let cleanedText = '';
-
-                // 只检查最后的10行内容
-                const startLine = Math.max(0, lines.length - 10);
-                for (let i = lines.length - 1; i >= startLine; i--) {
-                    if (!delTextsOfEnd.some(navigationText => lines[i].trim().includes(navigationText))) {
-                        cleanedText = lines[i] + (cleanedText ? '\n' + cleanedText : '');
-                    }
-                }
-
-                // 合并剩余的文本
-                cleanedText = lines.slice(0, startLine).join('\n') + (cleanedText ? '\n' + cleanedText : '');
-
-                return cleanedText.trim();
-            }
-            getChapterContent()
-        `, &content).Do(ctx)
+                    getChapterContent()
+                `, &content).Do(ctx)
 				if erro != nil {
 					return erro
 				}
@@ -738,47 +762,47 @@ func downloadNovel(ctx context.Context, novelURL string) {
 
 				// 先模拟滚动条滚动到底部，使之更似人类行为
 				scrollAction := chromedp.Evaluate(`
-						function humanScrollToBottom() {
-							// 使用带随机性质的非线性公式进行滚动
-							const duration = 2000 + Math.random() * 3000; // 滚动持续时间在2-5秒之间
-							const startTime = Date.now();
-							const startScroll = window.scrollY;
-							const endScroll = document.body.scrollHeight - window.innerHeight;
-							const distance = endScroll - startScroll;
+                    function humanScrollToBottom() {
+                        // 使用带随机性质的非线性公式进行滚动
+                        const duration = 2000 + Math.random() * 3000; // 滚动持续时间在2-5秒之间
+                        const startTime = Date.now();
+                        const startScroll = window.scrollY;
+                        const endScroll = document.body.scrollHeight - window.innerHeight;
+                        const distance = endScroll - startScroll;
 
-							// 非线性滚动函数
-							function easeInOutCubic(t) {
-								return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
-							}
+                        // 非线性滚动函数
+                        function easeInOutCubic(t) {
+                            return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+                        }
 
-							// 添加一些随机波动的函数
-							function addRandomness(progress) {
-								const randomFactor = 1 + (Math.random() - 0.5) * 0.2; // -10%到+10%的随机波动
-								return progress * randomFactor;
-							}
+                        // 添加一些随机波动的函数
+                        function addRandomness(progress) {
+                            const randomFactor = 1 + (Math.random() - 0.5) * 0.2; // -10%到+10%的随机波动
+                            return progress * randomFactor;
+                        }
 
-							function scrollStep() {
-								const elapsed = Date.now() - startTime;
-								let progress = Math.min(elapsed / duration, 1);
-								progress = easeInOutCubic(progress);
-								progress = addRandomness(progress);
-								window.scrollTo(0, startScroll + distance * progress);
+                        function scrollStep() {
+                            const elapsed = Date.now() - startTime;
+                            let progress = Math.min(elapsed / duration, 1);
+                            progress = easeInOutCubic(progress);
+                            progress = addRandomness(progress);
+                            window.scrollTo(0, startScroll + distance * progress);
 
-								if (progress < 1) {
-									requestAnimationFrame(scrollStep);
-								}
-							}
+                            if (progress < 1) {
+                                requestAnimationFrame(scrollStep);
+                            }
+                        }
 
-							// 开始滚动
-							scrollStep();
-							
-							// 返回一个Promise来让Go代码等待滚动完成
-							return new Promise(resolve => {
-								setTimeout(resolve, duration + 500); // 额外等待500ms以确保滚动完成
-							});
-						}
-						humanScrollToBottom()
-						`, nil)
+                        // 开始滚动
+                        scrollStep();
+
+                        // 返回一个Promise来让Go代码等待滚动完成
+                        return new Promise(resolve => {
+                            setTimeout(resolve, duration + 500); // 额外等待500ms以确保滚动完成
+                        });
+                    }
+                    humanScrollToBottom()
+                `, nil)
 
 				// 执行滚动操作并捕获可能的错误
 				erro := chromedp.Run(ctx, scrollAction)
@@ -788,75 +812,75 @@ func downloadNovel(ctx context.Context, novelURL string) {
 
 				// 尝试多种方式查找下一章链接
 				erro2 := chromedp.Run(ctx, chromedp.Evaluate(`
-function findNextChapter() {
-  // 方法1: 查找包含'下一章'或'下一页'文字的链接
-  const nextChapterKeywords = ['下一章', '下一页', '下节', '下一话', '下一回'];
-  let link = null;
+                    function findNextChapter() {
+                        // 方法1: 查找包含'下一章'或'下一页'文字的链接
+                        const nextChapterKeywords = ['下一章', '下一页', '下节', '下一话', '下一回'];
+                        let link = null;
 
-  for (const keyword of nextChapterKeywords) {
-    link = Array.from(document.querySelectorAll('a')).find(a => 
-      a.textContent.includes(keyword) && a.href);
-    if (link) break;
-  }
+                        for (const keyword of nextChapterKeywords) {
+                            link = Array.from(document.querySelectorAll('a')).find(a =>
+                                a.textContent.includes(keyword) && a.href);
+                            if (link) break;
+                        }
 
-  // 方法2: 查找id或class包含'next'的链接
-  if (!link) {
-    link = document.querySelector('a[id*="next" i], a[class*="next" i]');
-  }
+                        // 方法2: 查找id或class包含'next'的链接
+                        if (!link) {
+                            link = document.querySelector('a[id*="next" i], a[class*="next" i]');
+                        }
 
-  // 方法3: 查找第X+1章的链接
-  if (!link) {
-    const currentChapterText = document.title || '';
-    const chapterNumMatch = currentChapterText.match(/第(\d+)[章节回]/);
-    let nextChapterNum = 0;
-    if (chapterNumMatch && chapterNumMatch[1]) {
-      nextChapterNum = parseInt(chapterNumMatch[1]) + 1;
-    } else {
-      // 如果无法从标题中提取章节号，使用默认值
-      nextChapterNum = 1000; // 使用一个较大的数字，希望能找到一些链接
-    }
-    const nextChapterPattern = new RegExp('第' + nextChapterNum + '[章节回]');
-    link = Array.from(document.querySelectorAll('a')).find(a => 
-      nextChapterPattern.test(a.textContent));
-  }
+                        // 方法3: 查找第X+1章的链接
+                        if (!link) {
+                            const currentChapterText = document.title || '';
+                            const chapterNumMatch = currentChapterText.match(/第(\d+)[章节回]/);
+                            let nextChapterNum = 0;
+                            if (chapterNumMatch && chapterNumMatch[1]) {
+                                nextChapterNum = parseInt(chapterNumMatch[1]) + 1;
+                            } else {
+                                // 如果无法从标题中提取章节号，使用默认值
+                                nextChapterNum = 1000; // 使用一个较大的数字，希望能找到一些链接
+                            }
+                            const nextChapterPattern = new RegExp('第' + nextChapterNum + '[章节回]');
+                            link = Array.from(document.querySelectorAll('a')).find(a =>
+                                nextChapterPattern.test(a.textContent));
+                        }
 
-  // 方法4: 查找rel="next"的链接
-  if (!link) {
-    link = document.querySelector('a[rel="next"]');
-  }
+                        // 方法4: 查找rel="next"的链接
+                        if (!link) {
+                            link = document.querySelector('a[rel="next"]');
+                        }
 
-  // 检查找到的链接是否是推荐链接或非章节链接
-  if (link) {
-    const href = link.href;
-    const text = link.textContent.trim();
-    
-    // 排除推荐链接和非章节链接
-    const excludePatterns = [
-      /recommend/i,
-      /related/i,
-      /tuijian/i,
-      /xiaoshuo/i,
-      /book/i,
-      /index/i,
-      /目录/i,
-      /首页/i,
-      /home/i,
-      /list/i
-    ];
-    
-    for (const pattern of excludePatterns) {
-      if (pattern.test(href) || pattern.test(text)) {
-        return null;
-      }
-    }
-    
-    return href;
-  }
+                        // 检查找到的链接是否是推荐链接或非章节链接
+                        if (link) {
+                            const href = link.href;
+                            const text = link.textContent.trim();
 
-  return null;
-}
-findNextChapter()
-`, &nextLink))
+                            // 排除推荐链接和非章节链接
+                            const excludePatterns = [
+                                /recommend/i,
+                                /related/i,
+                                /tuijian/i,
+                                /xiaoshuo/i,
+                                /book/i,
+                                /index/i,
+                                /目录/i,
+                                /首页/i,
+                                /home/i,
+                                /list/i
+                            ];
+
+                            for (const pattern of excludePatterns) {
+                                if (pattern.test(href) || pattern.test(text)) {
+                                    return null;
+                                }
+                            }
+
+                            return href;
+                        }
+
+                        return null;
+                    }
+                    findNextChapter()
+                `, &nextLink))
 
 				if erro2 == nil && nextLink != "" {
 					// 确保链接是绝对路径
@@ -902,32 +926,32 @@ findNextChapter()
 		nextLinkText = ""
 		// 使用chapterCtx替代ctx，避免上下文超时
 		err = chromedp.Run(chapterCtx, chromedp.Evaluate(`
-function getNextLinkText() {
-	// 查找导航按钮区域中的页码信息
-	const paginationElements = document.querySelectorAll(
-		'.pagination, .pager, [id*="page"], [class*="page"], [role="navigation"], a[href*="page="], a[href*="p="]'
-	);
-	
-	// 查找包含页码信息的导航元素
-	for (let i = 0; i < paginationElements.length; i++) {
-		const text = paginationElements[i].textContent;
-		if (text.includes('第') && (text.includes('页') || text.includes('/'))) {
-			return text;
-		}
-	}
-	
-	// 如果没有找到导航区域的页码，再按原来的方式查找下一章链接文本
-	const nextChapterKeywords = ['下一章', '下一页', '下节', '下一话', '下一回'];
-	let link = null;
-	for (const keyword of nextChapterKeywords) {
-		link = Array.from(document.querySelectorAll('a')).find(a => 
-			a.textContent.includes(keyword) && a.href);
-		if (link) return link.textContent;
-	}
-	return '';
-}
-getNextLinkText()
-`, &nextLinkText))
+            function getNextLinkText() {
+                // 查找导航按钮区域中的页码信息
+                const paginationElements = document.querySelectorAll(
+                    '.pagination, .pager, [id*="page"], [class*="page"], [role="navigation"], a[href*="page="], a[href*="p="]'
+                );
+
+                // 查找包含页码信息的导航元素
+                for (let i = 0; i < paginationElements.length; i++) {
+                    const text = paginationElements[i].textContent;
+                    if (text.includes('第') && (text.includes('页') || text.includes('/'))) {
+                        return text;
+                    }
+                }
+
+                // 如果没有找到导航区域的页码，再按原来的方式查找下一章链接文本
+                const nextChapterKeywords = ['下一章', '下一页', '下节', '下一话', '下一回'];
+                let link = null;
+                for (const keyword of nextChapterKeywords) {
+                    link = Array.from(document.querySelectorAll('a')).find(a =>
+                        a.textContent.includes(keyword) && a.href);
+                    if (link) return link.textContent;
+                }
+                return '';
+            }
+            getNextLinkText()
+        `, &nextLinkText))
 
 		// 如果导航文本中包含页码信息，提取并使用它
 		pageMatch := regexp.MustCompile(`第(\d+)[页\/]`).FindStringSubmatch(nextLinkText)
