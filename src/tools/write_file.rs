@@ -50,7 +50,7 @@ impl Tool for WriteFileTool {
                         "description": "The content to write"
                     }
                 }),
-                &["path", "content"],
+                &["path", "content"][..],
             ),
         }
     }

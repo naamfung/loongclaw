@@ -29,7 +29,6 @@ func Search(keyword *C.char) {
 		chromedp.NoFirstRun,
 		chromedp.NoDefaultBrowserCheck,
 		chromedp.Headless,
-		chromedp.ExecPath("/usr/bin/chromium-browser"),
 		chromedp.DisableGPU,
 	)
 	defer cancelAlloc()
@@ -55,7 +54,6 @@ func Visit(url *C.char) {
 		chromedp.NoFirstRun,
 		chromedp.NoDefaultBrowserCheck,
 		chromedp.Headless,
-		chromedp.ExecPath("/usr/bin/chromium-browser"),
 		chromedp.DisableGPU,
 	)
 	defer cancelAlloc()
@@ -80,7 +78,6 @@ func Download(novelURL *C.char) {
 		chromedp.NoFirstRun,
 		chromedp.NoDefaultBrowserCheck,
 		chromedp.Headless,
-		chromedp.ExecPath("/usr/bin/chromium-browser"),
 		chromedp.DisableGPU,
 	)
 	defer cancelAlloc()

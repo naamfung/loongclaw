@@ -1,0 +1,41 @@
+package main
+
+import "C" // 必须导入以启用 cgo
+
+import (
+	"fmt"
+	"log"
+)
+
+// main 函数必须存在，即使为空
+func main() {}
+
+// 导出搜索功能
+//
+//export Search
+func Search(keyword *C.char) {
+	goKeyword := C.GoString(keyword)
+	log.Printf("Search called with: %s", goKeyword)
+	fmt.Printf("Search result for: %s\n", goKeyword)
+	fmt.Println("This is a test search result")
+}
+
+// 导出访问功能
+//
+//export Visit
+func Visit(url *C.char) {
+	goURL := C.GoString(url)
+	log.Printf("Visit called with: %s", goURL)
+	fmt.Printf("Visiting: %s\n", goURL)
+	fmt.Println("This is a test visit result")
+}
+
+// 导出下载功能
+//
+//export Download
+func Download(novelURL *C.char) {
+	goURL := C.GoString(novelURL)
+	log.Printf("Download called with: %s", goURL)
+	fmt.Printf("Downloading from: %s\n", goURL)
+	fmt.Println("This is a test download result")
+}

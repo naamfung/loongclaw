@@ -41,7 +41,7 @@ impl Tool for WebSearchTool {
                         "description": "Timeout in seconds (defaults to configured tool timeout budget)"
                     }
                 }),
-                &["query"],
+                &["query"][..],
             ),
         }
     }

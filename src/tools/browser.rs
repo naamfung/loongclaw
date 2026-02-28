@@ -146,7 +146,7 @@ impl Tool for BrowserTool {
                         "description": "Timeout in seconds (defaults to configured tool timeout budget)"
                     }
                 }),
-                &["command"],
+                &["command"][..],
             ),
         }
     }
