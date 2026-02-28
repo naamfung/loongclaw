@@ -51,7 +51,7 @@ impl Tool for WebSearchTool {
             Ok(q) => q,
             Err(msg) => return ToolResult::error(msg),
         };
-        let timeout_secs = resolve_timeout_secs(&input, self.default_timeout_secs);
+        let _timeout_secs = resolve_timeout_secs(&input, self.default_timeout_secs);
 
         // Call servicor search function
         servicor::search(&query);

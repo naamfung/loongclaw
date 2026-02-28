@@ -1,16 +1,13 @@
-use std::path::PathBuf;
+
 
 use async_trait::async_trait;
 use serde_json::json;
 use tracing::info;
 
 use loongclaw_core::llm_types::ToolDefinition;
-use loongclaw_core::text::floor_char_boundary;
-
-use super::{auth_context_from_input, schema_object, Tool, ToolResult, servicor};
+use super::{schema_object, Tool, ToolResult, servicor};
 
 pub struct BrowserTool {
-    data_dir: PathBuf,
     default_timeout_secs: u64,
     browser_executable_path: Option<String>,
 }
@@ -71,9 +68,8 @@ fn split_browser_command(command: &str) -> Result<Vec<String>, String> {
 }
 
 impl BrowserTool {
-    pub fn new(data_dir: &str, browser_executable_path: Option<String>) -> Self {
+    pub fn new(_data_dir: &str, browser_executable_path: Option<String>) -> Self {
         BrowserTool {
-            data_dir: PathBuf::from(data_dir).join("groups"),
             default_timeout_secs: 30,
             browser_executable_path,
         }
@@ -84,20 +80,7 @@ impl BrowserTool {
         self
     }
 
-    fn profile_path(&self, chat_id: i64) -> PathBuf {
-        self.data_dir
-            .join(chat_id.to_string())
-            .join("browser-profile")
-    }
 
-    fn session_name_for_chat(chat_id: i64) -> String {
-        let normalized = if chat_id < 0 {
-            format!("neg{}", chat_id.unsigned_abs())
-        } else {
-            chat_id.to_string()
-        };
-        format!("loongclaw-chat-{normalized}")
-    }
 
     fn get_browser_executable(&self) -> String {
         if let Some(path) = &self.browser_executable_path {
@@ -174,7 +157,7 @@ impl Tool for BrowserTool {
             None => return ToolResult::error("Missing 'command' parameter".into()),
         };
 
-        let timeout_secs = input
+        let _timeout_secs = input
             .get("timeout_secs")
             .and_then(|v| v.as_u64())
             .unwrap_or(self.default_timeout_secs);
@@ -247,27 +230,7 @@ mod tests {
         assert!(def.input_schema["properties"]["timeout_secs"].is_object());
     }
 
-    #[test]
-    fn test_browser_profile_path() {
-        let tool = BrowserTool::new("/tmp/test-data", None);
-        let path = tool.profile_path(12345);
-        assert_eq!(
-            path,
-            PathBuf::from("/tmp/test-data/groups/12345/browser-profile")
-        );
-    }
 
-    #[test]
-    fn test_browser_session_name_for_chat() {
-        assert_eq!(
-            BrowserTool::session_name_for_chat(12345),
-            "loongclaw-chat-12345"
-        );
-        assert_eq!(
-            BrowserTool::session_name_for_chat(-100987),
-            "loongclaw-chat-neg100987"
-        );
-    }
 
     #[tokio::test]
     async fn test_browser_missing_command() {
