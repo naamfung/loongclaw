@@ -40,7 +40,9 @@ func Search(keyword *C.char) {
 	defer cancelTimeout()
 
 	searchURL := fmt.Sprintf("https://www.baidu.com/s?ie=UTF-8&wd=%s", goKeyword)
-	search(ctxTimeout, searchURL)
+	if err := search(ctxTimeout, searchURL); err != nil {
+		log.Printf("搜索功能执行失败: %v", err)
+	}
 }
 
 // 导出访问功能
@@ -62,7 +64,9 @@ func Visit(url *C.char) {
 	ctxTimeout, cancelTimeout := context.WithTimeout(ctx, 60*time.Second)
 	defer cancelTimeout()
 
-	visitURL(ctxTimeout, goURL)
+	if err := visitURL(ctxTimeout, goURL); err != nil {
+		log.Printf("访问功能执行失败: %v", err)
+	}
 }
 
 // 导出下载功能
@@ -82,7 +86,9 @@ func Download(novelURL *C.char) {
 	defer cancel()
 
 	// 下载可能耗时较长，不使用超时
-	downloadNovel(ctx, goURL)
+	if err := downloadNovel(ctx, goURL); err != nil {
+		log.Printf("下载功能执行失败: %v", err)
+	}
 }
 
 // -------------------------------------------------------------------
@@ -92,7 +98,7 @@ func Download(novelURL *C.char) {
 // -------------------------------------------------------------------
 
 // 搜索功能
-func search(ctx context.Context, searchURL string) {
+func search(ctx context.Context, searchURL string) error {
 	// 定义变量来存储搜索结果
 	var titles []string
 	var links []string
@@ -123,17 +129,19 @@ func search(ctx context.Context, searchURL string) {
 		},
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("搜索失败: %v", err)
+		return err
 	}
 
 	// 打印搜索结果的标题和链接
 	for i, title := range titles {
 		fmt.Printf("Title: %s\nLink: %s\n\n", title, links[i])
 	}
+	return nil
 }
 
 // 访问功能
-func visitURL(ctx context.Context, url string) {
+func visitURL(ctx context.Context, url string) error {
 	// Variable to hold the result
 	var jsEnabled bool
 
@@ -151,21 +159,21 @@ func visitURL(ctx context.Context, url string) {
 			// 获取整个页面的文本内容，排除<script>和<style>标签以及特定的class
 			var textContent string
 			err := chromedp.Evaluate(`
-                function getTextContentWithoutScriptsAndStyles() {
-                    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
-                    let text = '';
-                    while (walker.nextNode()) {
-                        const node = walker.currentNode;
-                        if (!node.parentElement.matches('script, style, .confirm-dialog') &&
-                            window.getComputedStyle(node.parentElement).display !== 'none' &&
-                            window.getComputedStyle(node.parentElement).visibility !== 'hidden') {
-                            text += node.nodeValue.trim() + ' ';
-                        }
-                    }
-                    return text.trim();
-                }
-                getTextContentWithoutScriptsAndStyles()
-            `, &textContent).Do(ctx)
+				function getTextContentWithoutScriptsAndStyles() {
+					const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+					let text = '';
+					while (walker.nextNode()) {
+						const node = walker.currentNode;
+						if (!node.parentElement.matches('script, style, .confirm-dialog') &&
+							window.getComputedStyle(node.parentElement).display !== 'none' &&
+							window.getComputedStyle(node.parentElement).visibility !== 'hidden') {
+							text += node.nodeValue.trim() + ' ';
+						}
+					}
+					return text.trim();
+				}
+				getTextContentWithoutScriptsAndStyles()
+			`, &textContent).Do(ctx)
 			if err != nil {
 				return err
 			}
@@ -191,33 +199,38 @@ func visitURL(ctx context.Context, url string) {
 		}),
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("访问失败: %v", err)
+		return err
 	}
 
 	fmt.Println(pageText)
+	return nil
 }
 
 // 下载小说功能
-func downloadNovel(ctx context.Context, novelURL string) {
+func downloadNovel(ctx context.Context, novelURL string) error {
 	log.Printf("开始下载小说: %s\n", novelURL)
 
 	// 先访问小说目录页
 	err := chromedp.Run(ctx, chromedp.Navigate(novelURL))
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("导航到小说页面失败: %v", err)
+		return err
 	}
 
 	// 等待页面加载完成
 	err = chromedp.Run(ctx, chromedp.WaitVisible(`body`, chromedp.ByQuery))
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("等待页面加载失败: %v", err)
+		return err
 	}
 
 	// 获取页面标题作为文件名
 	var pageTitle string
 	err = chromedp.Run(ctx, chromedp.Title(&pageTitle))
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("获取页面标题失败: %v", err)
+		return err
 	}
 
 	// 清理标题，使其适合作为文件名
@@ -226,7 +239,8 @@ func downloadNovel(ctx context.Context, novelURL string) {
 	// 创建文件
 	file, err := os.Create(fileName)
 	if err != nil {
-		log.Fatalf("无法创建文件: %v", err)
+		log.Printf("无法创建文件: %v", err)
+		return err
 	}
 	defer file.Close()
 
@@ -434,7 +448,9 @@ func downloadNovel(ctx context.Context, novelURL string) {
 	}
 
 	if firstChapterURL == "" {
-		log.Fatal("无法找到任何章节链接")
+		err := fmt.Errorf("无法找到任何章节链接")
+		log.Printf("%v", err)
+		return err
 	}
 
 	fmt.Printf("找到第1章: %s\n", firstChapterTitle)
@@ -991,6 +1007,7 @@ func downloadNovel(ctx context.Context, novelURL string) {
 	}
 
 	fmt.Printf("小说下载完成，保存至: %s\n", fileName)
+	return nil
 }
 
 // 提取章节的基础标题，去除可能的分页信息
