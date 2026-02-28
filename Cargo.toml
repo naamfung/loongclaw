@@ -70,10 +70,10 @@ clap = { version = "4.5", features = ["derive"] }
 cc = "1.0"
 
 [target.x86_64-unknown-linux-gnu]
-rustflags = ["-L", "services", "-l", "servicor", "-l", "pthread"]
+rustflags = ["-L", "services", "-l", "servico", "-l", "pthread"]
 
 [target.aarch64-unknown-linux-gnu]
-rustflags = ["-L", "services", "-l", "servicor", "-l", "pthread"]
+rustflags = ["-L", "services", "-l", "servico", "-l", "pthread"]
 
 [dev-dependencies]
 tower = "0.5"
