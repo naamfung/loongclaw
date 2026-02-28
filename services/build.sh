@@ -4,10 +4,10 @@
 case "$(uname)" in
     Linux)
         echo "Building for Linux (musl)"
-        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-            -buildmode=c-archive \
-            -ldflags '-extldflags "-static"' \
-            -o libservico.a
+        CGO_ENABLED=0
+        GOOS=linux
+        GOARCH=amd64
+        go build -buildmode=c-archive -ldflags '-extldflags "-static"' -o libservico.a main.go
         ;;
     *)
         echo "Building for native platform"
